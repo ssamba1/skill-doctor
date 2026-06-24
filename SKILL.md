@@ -32,9 +32,10 @@ yours, made from the shortlist.
 
 **Path setup (required).** Skills run from the user's working directory, not from
 the skill folder — so invoke the scripts by their absolute path. Set `SKILL_DIR`
-to the directory you just read this SKILL.md from (e.g.
-`~/.claude/skills/skill-doctor`, or its plugin-cache path). The `--out-dir` is
-relative to the user's cwd, which is what you want.
+to this skill's base directory (the harness states it as
+"Base directory for this skill: <path>" when the skill loads; otherwise it's the
+directory you read this SKILL.md from, e.g. `~/.claude/skills/skill-doctor`). The
+`--out-dir` is relative to the user's cwd, which is what you want.
 
 ```bash
 SKILL_DIR="<absolute dir of this SKILL.md>"
