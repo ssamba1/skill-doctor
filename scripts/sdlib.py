@@ -109,6 +109,8 @@ def parse_frontmatter(text: str) -> dict:
                     i += 1
                     continue
                 indent = len(nxt) - len(nxt.lstrip())
+                if indent == 0:
+                    break  # a column-0 line is the next key — block content must be indented
                 if base_indent is None:
                     base_indent = indent
                 if indent < base_indent:
