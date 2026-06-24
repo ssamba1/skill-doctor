@@ -72,6 +72,47 @@ def test_apply_crlf_file_byte_exact_roundtrip(tmp_path, monkeypatch):
     assert p.read_bytes() == original                                          # exact restore
 
 
+def test_set_description_verify_gate_and_success(tmp_path, monkeypatch):
+    home = tmp_path / "claude"
+    monkeypatch.setenv("CLAUDE_HOME", str(home))
+    d = home / "skills" / "verbose"
+    d.mkdir(parents=True)
+    p = d / "SKILL.md"
+    orig = ("---\nname: verbose\ndescription: A very long winded description that talks about "
+            "pandas dataframes and data analysis at great length and length.\n---\nbody\n")
+    p.write_bytes(orig.encode())
+    cwd = str(tmp_path / "noproj")
+
+    # gate: drops required trigger word -> skipped
+    r = apply_mod.set_description("verbose", "totally unrelated text", cwd, True,
+                                  must_contain=["pandas"])
+    assert r["status"] == "skipped" and "trigger words" in r["reason"]
+    assert p.read_bytes() == orig.encode()        # untouched
+
+    # gate: not shorter -> noop
+    r = apply_mod.set_description("verbose", "x" * 500, cwd, True, must_contain=[])
+    assert r["status"] == "noop"
+
+    # success: shorter + keeps trigger word
+    new = "pandas dataframe analysis."
+    r = apply_mod.set_description("verbose", new, cwd, True, must_contain=["pandas"])
+    assert r["status"] == "compressed"
+    assert sdlib.parse_frontmatter(p.read_text(encoding="utf-8"))["description"] == new
+    assert (d / "SKILL.md.bak").exists()
+
+    # revert restores byte-exact
+    apply_mod.revert("verbose", cwd, True)
+    assert p.read_bytes() == orig.encode()
+
+
+def test_set_description_dryrun(tmp_path, monkeypatch):
+    home = tmp_path / "claude"
+    monkeypatch.setenv("CLAUDE_HOME", str(home))
+    _mk(home, "s", body="b\n", fm=("name: {n}", "description: a long enough description here"))
+    r = apply_mod.set_description("s", "short", str(tmp_path / "noproj"), False)
+    assert r["status"] == "would-compress"
+
+
 def test_apply_refuses_unknown_skill(tmp_path, monkeypatch):
     home = tmp_path / "claude"
     monkeypatch.setenv("CLAUDE_HOME", str(home))

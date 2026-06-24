@@ -84,9 +84,17 @@ All invoked as `python "$SKILL_DIR/scripts/<tool>.py" --help`:
 
 The report also flags **budget** (over Claude Code's `skillListingBudgetFraction`, descriptions get
 silently dropped) and lists **compress candidates** — skills to keep but whose descriptions are
-verbose. To act on compression, rewrite the flagged description to its minimal **routing-correct**
-form: keep the trigger words/phrases that make Claude auto-invoke it, cut prose/examples. Verify the
-skill still triggers on its intended prompts before/after.
+verbose. To compress one: draft a shorter **routing-correct** description (keep the trigger
+words/phrases that make Claude auto-invoke it; cut prose/examples), then apply it with the verify
+gate — it refuses the change unless the new text is shorter and still contains those trigger words:
+
+```bash
+python "$SKILL_DIR/scripts/apply.py" --set-description pandas-pro \
+  --text "Pandas DataFrame ops: cleaning, aggregation, merging, time series." \
+  --must-contain "pandas,dataframe" --write
+# revert like any change:
+python "$SKILL_DIR/scripts/apply.py" --names pandas-pro --revert --write
+```
 
 ## Notes
 - Token figures are offline estimates (~4 chars/token); **percentages are

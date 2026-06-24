@@ -72,6 +72,43 @@ def apply_disable(name: str, cwd: str | None, write: bool) -> dict:
     return {"name": name, "status": "disabled", "path": str(p), "backup": str(bak)}
 
 
+def set_description(name: str, new_text: str, cwd: str | None, write: bool,
+                   must_contain: list[str] | None = None) -> dict:
+    """Replace a skill's description with a shorter, routing-correct one.
+
+    Verify gate: the new description must be non-empty, strictly shorter than the
+    old one, and contain every `must_contain` trigger word (case-insensitive) —
+    so compression can't silently break what makes the skill auto-fire."""
+    must_contain = must_contain or []
+    p = _find_skill_md(name, cwd)
+    if p is None:
+        return {"name": name, "status": "skipped", "reason": "not an editable skill"}
+    raw = p.read_bytes()
+    text = raw.decode("utf-8", errors="replace")
+    old = str(sdlib.parse_frontmatter(text).get("description") or "")
+    new_text = " ".join(new_text.split())
+    if not new_text:
+        return {"name": name, "status": "skipped", "reason": "empty new description"}
+    missing = [w for w in must_contain if w.lower() not in new_text.lower()]
+    if missing:
+        return {"name": name, "status": "skipped",
+                "reason": f"new description drops trigger words: {missing}"}
+    if len(new_text) >= len(old):
+        return {"name": name, "status": "noop", "reason": "not shorter than current",
+                "old_chars": len(old), "new_chars": len(new_text)}
+    if not write:
+        return {"name": name, "status": "would-compress",
+                "old_chars": len(old), "new_chars": len(new_text), "path": str(p)}
+    new_full = sdlib.set_frontmatter_field(text, "description", new_text)
+    bak = p.with_suffix(".md.bak")
+    bak.write_bytes(raw)
+    tmp = p.with_suffix(".md.tmp")
+    tmp.write_bytes(new_full.encode("utf-8"))
+    os.replace(tmp, p)
+    return {"name": name, "status": "compressed", "old_chars": len(old),
+            "new_chars": len(new_text), "path": str(p), "backup": str(bak)}
+
+
 def revert(name: str, cwd: str | None, write: bool) -> dict:
     p = _find_skill_md(name, cwd)
     if p is None:
@@ -107,11 +144,26 @@ def main(argv=None) -> int:
     ap.add_argument("--cwd", default=None)
     ap.add_argument("--write", action="store_true", help="actually modify files (else dry-run)")
     ap.add_argument("--revert", action="store_true", help="restore from .bak instead")
+    ap.add_argument("--set-description", default=None,
+                    help="compress one skill's description (with --text)")
+    ap.add_argument("--text", default=None, help="new description for --set-description")
+    ap.add_argument("--must-contain", default=None,
+                    help="comma-separated trigger words the new description must keep")
     args = ap.parse_args(argv)
+
+    if args.set_description:
+        if not args.text:
+            ap.error("--set-description requires --text")
+        must = [w.strip() for w in (args.must_contain or "").split(",") if w.strip()]
+        res = set_description(args.set_description, args.text, args.cwd, args.write, must)
+        print(json.dumps({"write": args.write, "results": [res]}, indent=2))
+        if not args.write:
+            print("\n(dry-run — re-run with --write to apply)", file=sys.stderr)
+        return 0
 
     names = _names_from_args(args)
     if not names:
-        ap.error("no skills given (use --names or --from-actions)")
+        ap.error("no skills given (use --names, --from-actions, or --set-description)")
 
     results = [
         (revert if args.revert else apply_disable)(n, args.cwd, args.write)

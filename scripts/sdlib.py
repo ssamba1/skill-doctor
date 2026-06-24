@@ -149,6 +149,47 @@ def _coerce_scalar(val: str):
     return val
 
 
+def set_frontmatter_field(text: str, key: str, value: str) -> str:
+    """Return text with frontmatter `key` set to `value` as a single double-quoted
+    scalar. Replaces the key's full span (single-line, quoted, block scalar, or
+    empty+indented-continuation), preserving all other keys. Creates frontmatter
+    if absent. Newlines/tabs in value are collapsed to spaces; quotes escaped."""
+    clean = " ".join(str(value).split())
+    escaped = clean.replace("\\", "\\\\").replace('"', '\\"')
+    new_line = f'{key}: "{escaped}"'
+
+    m = re.match(r"^---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|$)(.*)$", text, re.DOTALL)
+    if not m:
+        return f"---\n{new_line}\n---\n\n{text}"
+    block, body = m.group(1), m.group(2)
+    lines = block.split("\n")
+
+    out = []
+    i = 0
+    replaced = False
+    key_re = re.compile(rf"^{re.escape(key)}\s*:\s*(.*)$")
+    while i < len(lines):
+        km = key_re.match(lines[i])
+        if not km:
+            out.append(lines[i])
+            i += 1
+            continue
+        # Found the key — consume its full value span.
+        val = km.group(1).strip()
+        i += 1
+        if val in ("|", ">", "|-", ">-", "|+", ">+") or val == "":
+            while i < len(lines):
+                nxt = lines[i]
+                if nxt.strip() == "" or (len(nxt) - len(nxt.lstrip())) == 0:
+                    break
+                i += 1
+        out.append(new_line)
+        replaced = True
+    if not replaced:
+        out.insert(0, new_line)
+    return f"---\n" + "\n".join(out) + "\n---\n" + body
+
+
 def as_bool(val, default=False) -> bool:
     if isinstance(val, bool):
         return val

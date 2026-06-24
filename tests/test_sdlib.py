@@ -126,6 +126,41 @@ def test_jaccard_and_tokenize():
     assert sdlib.jaccard(set(), a) == 0.0
 
 
+def test_set_frontmatter_field_single_line():
+    t = "---\nname: x\ndescription: old long description\n---\nbody\n"
+    out = sdlib.set_frontmatter_field(t, "description", "new short")
+    fm = sdlib.parse_frontmatter(out)
+    assert fm["description"] == "new short"
+    assert fm["name"] == "x"
+    assert fm["_body"].strip() == "body"
+
+
+def test_set_frontmatter_field_replaces_multiline_plain_scalar():
+    t = ("---\nname: x\ndescription:\n  line one of the desc\n  line two\n"
+         "license: MIT\n---\nbody\n")
+    out = sdlib.set_frontmatter_field(t, "description", "compact")
+    fm = sdlib.parse_frontmatter(out)
+    assert fm["description"] == "compact"
+    assert fm["license"] == "MIT"          # other keys preserved
+    assert "line two" not in out           # old continuation consumed
+
+
+def test_set_frontmatter_field_block_scalar_and_missing():
+    t = "---\nname: x\ndescription: |\n  a\n  b\n---\nbody\n"
+    out = sdlib.set_frontmatter_field(t, "description", "c")
+    assert sdlib.parse_frontmatter(out)["description"] == "c"
+    # missing key -> inserted
+    t2 = "---\nname: y\n---\nbody\n"
+    out2 = sdlib.set_frontmatter_field(t2, "description", "added")
+    assert sdlib.parse_frontmatter(out2)["description"] == "added"
+
+
+def test_set_frontmatter_field_no_frontmatter_creates():
+    out = sdlib.set_frontmatter_field("just body\n", "description", "d")
+    assert out.startswith("---\n")
+    assert sdlib.parse_frontmatter(out)["description"] == "d"
+
+
 def test_cost_grade():
     assert sdlib.cost_grade(40) == "A"
     assert sdlib.cost_grade(90) == "B"
