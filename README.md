@@ -1,96 +1,106 @@
-# skill-doctor
+<div align="center">
+
+# 🩺 skill-doctor
+
+**Audit your *installed* Claude Code skill library — and cut the invisible per-turn token tax.**
 
 [![tests](https://github.com/ssamba1/skill-doctor/actions/workflows/ci.yml/badge.svg)](https://github.com/ssamba1/skill-doctor/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/ssamba1/skill-doctor?color=2da44e)](https://github.com/ssamba1/skill-doctor/releases)
+[![license](https://img.shields.io/github/license/ssamba1/skill-doctor?color=blue)](LICENSE)
+![python](https://img.shields.io/badge/python-3.11%2B-blue)
+![dependencies](https://img.shields.io/badge/dependencies-none-success)
 
-A Claude Code skill that audits your **installed** skill library and cuts the
-invisible per-turn token tax.
+<img src="assets/skill-doctor-demo.svg" width="820" alt="skill-doctor sample run">
 
-Every auto-invocable skill injects its description into **every request**, fired
-or not. With a big library that is a constant cost. Claude Code shows this only
-per-*plugin* and never flags trigger collisions. skill-doctor:
+</div>
 
-- **Measures the tax** — exact tokens injected per turn, per skill (from the live
-  `skill_listing`), total + worst offenders.
-- **Finds dead weight** — mines your transcripts for which skills actually fire;
-  flags never-fired auto-invoking skills.
-- **Finds collisions** — skills whose descriptions overlap enough to ambiguously
-  co-trigger (overlap-coefficient shortlist + model judgment).
+> Every auto-invocable skill injects its description into **every single request** — fired or not.
+> With a big library that's a constant, invisible cost. Claude Code shows it only per-*plugin* and
+> never flags trigger collisions, so your standalone skills are a blind spot. skill-doctor closes it.
+
+## What it does
+
+- **Measures the tax** — exact tokens injected per turn, per skill (from the live `skill_listing`); total + worst offenders.
+- **Finds dead weight** — mines your transcripts for which skills actually fire; flags never-fired auto-invoking skills, backed by a confidence line (days of history observed).
+- **Finds collisions & duplicates** — descriptions that overlap enough to ambiguously co-trigger, and near-identical skills where one is redundant.
 - **Flags staleness** — deprecated model identifiers in skill bodies.
-- **Flags duplicates** — near-identical skills where one is redundant.
-- **Fixes it** — emits the exact, reversible `disable-model-invocation` edits with
-  projected savings, backed by a confidence line (days of history observed).
+- **Audits MCP** — flags configured-but-never-used MCP servers (another always-on drain).
+- **Fixes it** — emits the exact, **reversible** `disable-model-invocation` edits with projected savings.
 
-Handles real-world subtleties: `paths`-scoped skills are conditional (excluded from
-the always-on tax), attribution-only fires count as "used", token counts can be
-made exact via the count_tokens API (`--exact`), and recommendations are framed by
-how much transcript history backs them.
-
-Stdlib-only Python. No dependencies.
+**Stdlib-only Python. No dependencies.**
 
 ## Quick start
 
 ```bash
 python scripts/run.py --live --out-dir ./skill-doctor-out
-# read ./skill-doctor-out/report.md, then:
-python scripts/apply.py --from-actions ./skill-doctor-out/actions.json --write   # reversible
+# read ./skill-doctor-out/report.md, then (reversible):
+python scripts/apply.py --from-actions ./skill-doctor-out/actions.json --write
 ```
 
-## What it found on a real 89-skill machine
-- ~6,832 tokens injected **every turn** (89 loaded skills, ~27k chars).
-- 61 of 67 editable skills had never fired → disabling them saves
-  ~4,581 tokens/turn (~92% of the editable tax) with zero loss (still
-  invocable with `/name`).
-- 6 trigger-collision candidates (e.g. `subagent-driven-development` ↔
-  `using-git-worktrees`).
+Or install as a skill: `/plugin marketplace add ssamba1/skill-doctor`, then ask *"audit my skills."*
 
-## Sample output
+## What it found on a real 89-skill machine
+
+- ~**6,832 tokens** injected **every turn** (89 loaded skills, ~27k chars).
+- **61 of 67** editable skills had never fired in 75 days → disabling them saves **~4,581 tokens/turn (~92%)** with zero loss (still `/`-invocable).
+- 4 trigger-collision pairs · **10 of 12** MCP servers never used.
+
+## Sample report (text)
 
 ```
 ## Context tax (per turn)
-- Loaded skills: 89 (authoritative, from live skill_listing)
-- Total injected: ~6,832 tokens every turn (~27,329 chars)
-- Editable always-on tax: ~4,977 tokens/turn
+- Loaded skills: 89   ·   Total injected: ~6,832 tokens every turn
+- Editable always-on tax: ~4,977 tokens/turn   ·   Already disabled: 2
 
 ## Disable candidates — never fired, still auto-invoking
-Confidence: based on ~75.7 days of transcript history (36 invocations observed).
-Disabling these 61 skills cuts ~4,581 tokens/turn (92% of editable tax) — still /-invocable.
-| skill        | est tokens/turn | age (days) |
-| claude-api   | 270             | 0.5        |
-| xlsx         | 237             | 0.5        |
-| agent-browser| 236             | 0.5        |
-...
+Confidence: ~75.7 days of history (36 invocations observed).
+Disabling 61 skills cuts ~4,581 tokens/turn (92%) — still /-invocable.
 
-## Trigger-collision candidates
-| a                          | b                    | overlap | shared words            |
-| subagent-driven-development| using-git-worktrees  | 0.67    | executing, implementation, plans |
+## Trigger collisions: 4   ## Duplicates: 0   ## Stale: 0
+## MCP servers: 10 of 12 configured never used
 
-## MCP servers — configured but never used
-10 of 12 configured MCP servers have no recorded tool calls (over ~75.7d). e.g. chrome-devtools, playwright, motherduck …
-
-SUMMARY: ~6,832 tokens/turn | 61 never-fired (save ~4,581 tok, 92%) | 4 collision pairs | 10 unused MCP servers | history 75.7d
+SUMMARY: ~6,832 tok/turn | 61 never-fired (save ~4,581 tok, 92%) | 4 collisions | 10 unused MCP | history 75.7d
 ```
 
-## Layout
-```
-scripts/  scan.py usage.py collide.py report.py apply.py run.py mcpusage.py sdlib.py
-tests/    pytest suite (hermetic units + a real-machine dogfood)
-references/mechanics.md   the verified Claude Code internals it relies on
-```
+<details>
+<summary><b>How it works & real-world subtleties</b></summary>
 
-Bonus: `python scripts/mcpusage.py` flags MCP servers you configured but never
-use (another always-on context drain).
+- The scripts emit deterministic JSON facts; the one judgment call (confirming a collision) is made by the model from the shortlist.
+- `paths`-scoped skills load only for matching files → excluded from the always-on tax, never proposed for disabling.
+- Attribution-only fires (some slash commands) count as "used", so they're never mis-flagged as dead.
+- Token figures are offline estimates (~4 chars/token); **percentages are tokenizer-independent**. Set `ANTHROPIC_API_KEY` and add `--exact` for precise counts via the count_tokens API.
+- "Never fired" is framed by how many days of transcript history back it — more history, stronger recommendation.
+- Verified Claude Code internals it relies on are documented in [`references/mechanics.md`](references/mechanics.md).
+
+</details>
+
+## Tools
+
+| script | purpose |
+|---|---|
+| `scan.py` | inventory + per-skill cost + staleness (`--live` / `--exact`) |
+| `usage.py` | per-skill firing history from transcripts |
+| `collide.py` | trigger-collision + duplicate shortlist |
+| `report.py` | merge into `report.md` + `actions.json` |
+| `apply.py` | apply/revert `disable-model-invocation` (guarded, reversible) |
+| `mcpusage.py` | flag configured-but-unused MCP servers |
+| `run.py` | run the whole pipeline |
 
 ## Tests
+
 ```bash
-python -m pytest tests/ -q
+python -m pytest tests/ -q          # 55 hermetic tests
+SKILL_DOCTOR_DOGFOOD=1 python -m pytest tests/ -q   # + 4 real-machine checks
 ```
 
-## How it works / safety
-- Token figures are offline estimates (~4 chars/token); **percentages are
-  tokenizer-independent**. Set `ANTHROPIC_API_KEY` for exact counts.
-- `apply.py` edits only user/project `SKILL.md` frontmatter (never plugin/bundled
-  skills), writes a `.bak`, and is fully reversible (`--revert --write`).
-- Mechanics it depends on are documented in `references/mechanics.md`.
+CI runs the hermetic suite on Linux + Windows (Python 3.11 & 3.12).
+
+## Safety
+
+`apply.py` edits only your own user/project `SKILL.md` frontmatter (never plugin/bundled skills),
+writes a `.bak`, replaces atomically, and reverts byte-exact (`--revert --write`). Disabling a skill
+only stops *automatic* invocation — you can still run it with `/name`.
 
 ## License
+
 MIT
