@@ -3,13 +3,16 @@ import json
 import mcpusage as mu
 
 
-def _toolcall(name):
-    return json.dumps({
+def _toolcall(name, ts=None):
+    obj = {
         "type": "assistant",
         "message": {"role": "assistant", "content": [
             {"type": "tool_use", "id": "t", "name": name, "input": {}}
         ]},
-    })
+    }
+    if ts:
+        obj["timestamp"] = ts
+    return json.dumps(obj)
 
 
 def test_server_of():
@@ -45,6 +48,23 @@ def test_build_flags_never_used(tmp_path):
     assert res["never_used"] == ["git", "time"]
     assert res["used_but_unconfigured"] == ["playwright"]
     assert res["configured_count"] == 3
+
+
+def test_build_history_and_last_used(tmp_path):
+    cfg = tmp_path / ".claude.json"
+    cfg.write_text(json.dumps({"mcpServers": {"context7": {}}}), encoding="utf-8")
+    proj = tmp_path / "projects" / "p1"
+    proj.mkdir(parents=True)
+    (proj / "s.jsonl").write_text(
+        "\n".join([
+            _toolcall("mcp__context7__query-docs", ts="2026-04-01T00:00:00.000Z"),
+            _toolcall("mcp__context7__query-docs", ts="2026-05-01T00:00:00.000Z"),
+        ]) + "\n",
+        encoding="utf-8",
+    )
+    res = mu.build([cfg], tmp_path / "projects")
+    assert res["last_used"]["context7"] == "2026-05-01T00:00:00.000Z"
+    assert res["history_days"] is not None and res["history_days"] >= 0
 
 
 def test_build_empty(tmp_path):

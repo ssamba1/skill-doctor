@@ -30,15 +30,20 @@ yours, made from the shortlist.
 
 ## Workflow
 
-Run the full pipeline (writes JSON + a markdown report into an output dir):
+**Path setup (required).** Skills run from the user's working directory, not from
+the skill folder — so invoke the scripts by their absolute path. Set `SKILL_DIR`
+to the directory you just read this SKILL.md from (e.g.
+`~/.claude/skills/skill-doctor`, or its plugin-cache path). The `--out-dir` is
+relative to the user's cwd, which is what you want.
 
 ```bash
-python scripts/run.py --live --out-dir ./skill-doctor-out
+SKILL_DIR="<absolute dir of this SKILL.md>"
+python "$SKILL_DIR/scripts/run.py" --live --out-dir ./skill-doctor-out
 ```
 
 `--live` pulls the authoritative loaded set + exact injected payload from the most
 recent transcript. Outputs: `scan.json`, `usage.json`, `collide.json`,
-`report.md`, `actions.json`.
+`report.md`, `actions.json`. A one-line SUMMARY prints to stdout.
 
 Then:
 
@@ -52,24 +57,28 @@ Then:
 
 ```bash
 # dry-run first (default), then --write
-python scripts/apply.py --from-actions ./skill-doctor-out/actions.json --write
+python "$SKILL_DIR/scripts/apply.py" --from-actions ./skill-doctor-out/actions.json --write
 # undo anything:
-python scripts/apply.py --names skill-a,skill-b --revert --write
+python "$SKILL_DIR/scripts/apply.py" --names skill-a,skill-b --revert --write
 ```
 
 `apply.py` only edits user/project `SKILL.md` frontmatter (never plugin/bundled
 skills), writes a `.bak`, and is fully reversible.
 
-## Individual tools
-- `scripts/scan.py` — inventory + per-skill cost + staleness (`--live` / `--listing FILE`)
-- `scripts/usage.py` — per-skill firing history from transcripts (`--days N`)
-- `scripts/collide.py` — trigger-collision shortlist (`--threshold`, overlap-coefficient)
-- `scripts/report.py` — merge into `report.md` + `actions.json`
-- `scripts/apply.py` — apply/revert `disable-model-invocation` (guarded)
-- `scripts/mcpusage.py` — flag configured-but-never-used MCP servers (reads
-  `~/.claude.json` + transcripts)
+Optionally also flag unused MCP servers:
 
-Run `python scripts/<tool>.py --help` for flags.
+```bash
+python "$SKILL_DIR/scripts/mcpusage.py"
+```
+
+## Individual tools
+All invoked as `python "$SKILL_DIR/scripts/<tool>.py" --help`:
+- `scan.py` — inventory + per-skill cost + staleness (`--live` / `--listing FILE` / `--exact`)
+- `usage.py` — per-skill firing history from transcripts (`--days N`)
+- `collide.py` — trigger-collision shortlist (`--threshold`, overlap-coefficient)
+- `report.py` — merge into `report.md` + `actions.json`
+- `apply.py` — apply/revert `disable-model-invocation` (guarded)
+- `mcpusage.py` — flag configured-but-never-used MCP servers (`~/.claude.json` + transcripts)
 
 ## Notes
 - Token figures are offline estimates (~4 chars/token); **percentages are

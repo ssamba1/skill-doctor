@@ -42,21 +42,46 @@ def _server_of(tool_name: str):
     return m.group(1) if m else None
 
 
+def _ts_dt(ts: str):
+    from datetime import datetime
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
 def mine_usage(projects_dir: Path) -> dict:
     use: dict[str, int] = {}
+    last: dict[str, str] = {}
+    hist_min = None
+    hist_max = None
     files = list(projects_dir.rglob("*.jsonl")) if projects_dir.exists() else []
     scanned = 0
     for f in files:
         scanned += 1
         try:
             with f.open(encoding="utf-8", errors="replace") as fh:
+                first = True
                 for line in fh:
+                    if first:
+                        first = False
+                        if '"timestamp"' in line:
+                            try:
+                                d = _ts_dt(json.loads(line).get("timestamp", ""))
+                                if d:
+                                    hist_min = d if hist_min is None else min(hist_min, d)
+                                    hist_max = d if hist_max is None else max(hist_max, d)
+                            except (json.JSONDecodeError, ValueError):
+                                pass
                     if "mcp__" not in line or '"tool_use"' not in line:
                         continue
                     try:
                         obj = json.loads(line)
                     except (json.JSONDecodeError, ValueError):
                         continue
+                    ts = obj.get("timestamp", "")
                     content = (obj.get("message") or {}).get("content")
                     if not isinstance(content, list):
                         continue
@@ -65,9 +90,14 @@ def mine_usage(projects_dir: Path) -> dict:
                             srv = _server_of(b.get("name", ""))
                             if srv:
                                 use[srv] = use.get(srv, 0) + 1
+                                if ts and (srv not in last or ts > last[srv]):
+                                    last[srv] = ts
         except OSError:
             continue
-    return {"files_scanned": scanned, "usage": use}
+    history_days = round((hist_max - hist_min).total_seconds() / 86400.0, 1) \
+        if hist_min and hist_max else None
+    return {"files_scanned": scanned, "usage": use, "last_used": last,
+            "history_days": history_days}
 
 
 def build(config_paths: list[Path], projects_dir: Path) -> dict:
@@ -79,9 +109,11 @@ def build(config_paths: list[Path], projects_dir: Path) -> dict:
     return {
         "generated": "mcpusage",
         "files_scanned": mined["files_scanned"],
+        "history_days": mined["history_days"],          # confidence for "never used"
         "configured_count": len(configured),
         "configured": sorted(configured),
         "usage": dict(sorted(use.items(), key=lambda kv: kv[1], reverse=True)),
+        "last_used": mined["last_used"],
         "never_used": never,
         "used_but_unconfigured": unconfigured,
     }
@@ -107,8 +139,9 @@ def main(argv=None) -> int:
     out = json.dumps(result, indent=2)
     if args.out:
         Path(args.out).write_text(out, encoding="utf-8")
+        hd = result["history_days"]
         print(f"wrote {args.out}: {len(result['never_used'])}/{result['configured_count']} "
-              f"servers never used")
+              f"servers never used" + (f" (over ~{hd:g}d of history)" if hd else ""))
     else:
         print(out)
     return 0
