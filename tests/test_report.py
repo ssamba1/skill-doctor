@@ -107,6 +107,28 @@ def test_report_empty_inputs_no_crash():
     assert actions["projected_token_savings"] == 0
 
 
+def test_report_ignore_allowlist_excludes_candidate():
+    md, actions = report_mod.build(_scan(), _usage(), _collide(), ignore={"neverfired"})
+    assert [c["name"] for c in actions["disable_candidates"]] == []
+    assert actions["ignored"] == ["neverfired"]
+
+
+def test_report_compress_section():
+    comp = {"target_tokens": 75, "potential_savings": 225,
+            "candidates": [{"name": "verbose", "current_tokens": 300,
+                            "target_tokens": 75, "potential_savings": 225}]}
+    md, actions = report_mod.build(_scan(), _usage(), _collide(), compress=comp)
+    assert actions["compress_savings"] == 225
+    assert "Compress" in md and "`verbose`" in md
+
+
+def test_report_budget_warning():
+    scan = _scan()
+    scan.update({"over_budget": True, "budget_tokens": 2000, "budget_basis_tokens": 6832})
+    md, _ = report_mod.build(scan, _usage(), _collide())
+    assert "Over the skill budget" in md
+
+
 def test_report_handles_no_candidates():
     scan = _scan()
     # mark neverfired as fired

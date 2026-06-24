@@ -133,6 +133,20 @@ def test_scan_empty_library_no_crash(tmp_path, monkeypatch):
     assert res["skills"] == []
 
 
+def test_scan_grades_and_budget(tmp_path, monkeypatch):
+    home = tmp_path / "claude"
+    monkeypatch.setenv("CLAUDE_HOME", str(home))
+    _mk(home, "alpha", "alpha desc")
+    # listing whose injected payload is large vs a tiny budget -> over budget
+    listing = {"type": "skill_listing", "skillCount": 1, "names": ["alpha"],
+               "content": "- alpha: " + ("x" * 8000)}
+    res = scan_mod.build(cwd=str(tmp_path / "noproj"), ratio=4.0, listing=listing,
+                         budget_tokens=100)
+    assert res["over_budget"] is True
+    assert res["budget_overage_tokens"] > 0
+    assert all("grade" in s for s in res["skills"])
+
+
 def test_scan_main_writes_out(tmp_path, monkeypatch, capsys):
     home = tmp_path / "claude"
     monkeypatch.setenv("CLAUDE_HOME", str(home))

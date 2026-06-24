@@ -126,6 +126,14 @@ def test_jaccard_and_tokenize():
     assert sdlib.jaccard(set(), a) == 0.0
 
 
+def test_cost_grade():
+    assert sdlib.cost_grade(40) == "A"
+    assert sdlib.cost_grade(90) == "B"
+    assert sdlib.cost_grade(150) == "C"
+    assert sdlib.cost_grade(250) == "D"
+    assert sdlib.cost_grade(300) == "F"
+
+
 def test_count_tokens_exact_no_key_returns_none(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     assert sdlib.count_tokens_exact("some text", api_key=None) is None

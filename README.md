@@ -22,8 +22,10 @@ Every auto-invocable skill injects its description into **every single request**
 
 | check | what it finds |
 |---|---|
-| 🩺 **Context tax** | exact tokens each skill injects per turn (from the live `skill_listing`) — total + worst offenders |
+| 🩺 **Context tax** | exact tokens each skill injects per turn (from the live `skill_listing`) — total, per-skill A–F grades, worst offenders |
+| 📉 **Budget check** | whether you're over Claude Code's `skillListingBudgetFraction` (~2k tokens) — past it, Claude Code silently shortens/drops descriptions |
 | 💀 **Dead weight** | skills that never fire, mined from your transcripts, backed by a confidence line (days of history) |
+| ✂️ **Compression** | skills you *keep* but whose descriptions are bloated — trim to minimal routing-correct form (no disabling) |
 | ⚔️ **Collisions & duplicates** | descriptions that overlap enough to ambiguously co-trigger; near-identical skills where one is redundant |
 | 🕰️ **Staleness** | deprecated model identifiers left in skill bodies |
 | 🔌 **MCP audit** | configured-but-never-used MCP servers (another always-on drain) |
@@ -45,7 +47,24 @@ Or install it: `/plugin marketplace add ssamba1/skill-doctor`, then ask *"audit 
 <img src="assets/skill-doctor-demo.svg" width="760" alt="terminal output of a skill-doctor run">
 </div>
 
-> **On a real 89-skill machine:** ~6,832 tokens injected every turn; **61 of 67** editable skills never fired in 75 days → disabling them reclaims **~4,581 tokens/turn (~92%)** with zero loss. Plus 4 collision pairs and 10 of 12 MCP servers unused.
+## Proven on real data
+
+skill-doctor predicted ~4,581 tokens of savings on an 89-skill machine. After applying its
+`disable-model-invocation` fixes, the **actual `skill_listing` payload measured from the session
+logs** dropped — confirming the mechanism, not just an estimate:
+
+| | skills loaded | injected chars | ~tokens / turn |
+|---|---|---|---|
+| **before** | 89 | 27,329 | ~6,832 |
+| **after** | **49** | **7,978** | **~1,994** |
+
+**Measured reduction: ~4,838 tokens every turn.** Disabling a skill genuinely removes it from the
+always-on payload; the saving is verifiable in your own `~/.claude/projects/*.jsonl`.
+
+Skill bloat isn't only a cost problem — research shows scaling to a 202-skill library drops agent
+accuracy by up to **21%** ([Skill Shadowing, arXiv 2605.24050](https://arxiv.org/abs/2605.24050)),
+and ~48% of skill descriptions are compressible with ~86% functional retention
+([SkillReducer, arXiv 2603.29919](https://arxiv.org/abs/2603.29919)). Fewer, sharper skills route better.
 
 <details>
 <summary><b>How it works & the subtleties it gets right</b></summary>
@@ -68,10 +87,14 @@ Or install it: `/plugin marketplace add ssamba1/skill-doctor`, then ask *"audit 
 | `scan.py` | inventory + per-skill cost + staleness (`--live` / `--exact`) |
 | `usage.py` | per-skill firing history from transcripts |
 | `collide.py` | trigger-collision + duplicate shortlist |
+| `compress.py` | flag verbose descriptions to slim (keep the skill, cut its cost) |
 | `report.py` | merge into `report.md` + `actions.json` |
 | `apply.py` | apply/revert `disable-model-invocation` (guarded, reversible) |
 | `mcpusage.py` | flag configured-but-unused MCP servers |
 | `run.py` | run the whole pipeline |
+
+> Unlike static skill inspectors, skill-doctor is **usage- and cost-aware**: it reads your real
+> transcripts and the live injected payload, so it knows what actually fires and what it actually costs.
 
 ## Quality
 

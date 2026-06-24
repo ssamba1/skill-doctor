@@ -31,7 +31,9 @@ def _ever_fired(f: dict) -> bool:
 
 def build(scan: dict, usage: dict, collide: dict,
           grace_days: float = 0.0, dup_threshold: float = 0.6,
-          mcp: dict | None = None) -> tuple[str, dict]:
+          mcp: dict | None = None, ignore: set | None = None,
+          compress: dict | None = None) -> tuple[str, dict]:
+    ignore = set(ignore or [])
     skills = scan.get("skills", [])
     total = scan.get("editable_total_est_tokens", 0) or 0
     loaded_total = scan.get("loaded_total_est_tokens")
@@ -42,6 +44,8 @@ def build(scan: dict, usage: dict, collide: dict,
     too_new = []
     for s in skills:
         if s["disabled"] or s.get("conditional") or not s.get("user_invocable", True):
+            continue
+        if s["name"] in ignore:
             continue
         if s.get("loaded") is False:
             continue
@@ -79,6 +83,9 @@ def build(scan: dict, usage: dict, collide: dict,
         ],
         "conditional_skills": [s["name"] for s in skills if s.get("conditional")],
         "unused_mcp_servers": (mcp or {}).get("never_used", []),
+        "compress_candidates": (compress or {}).get("candidates", []),
+        "compress_savings": (compress or {}).get("potential_savings", 0),
+        "ignored": sorted(ignore),
     }
 
     # ---- markdown ----
@@ -100,6 +107,14 @@ def build(scan: dict, usage: dict, collide: dict,
         L.append(f"- **Conditional (paths-scoped, not always-on):** "
                  f"{scan.get('conditional_count')}")
     L.append("")
+    if scan.get("over_budget"):
+        bt = scan.get("budget_tokens")
+        basis = scan.get("budget_basis_tokens")
+        L.append(f"> ⚠️ **Over the skill budget.** Your skills inject ~{basis:,} tokens, "
+                 f"but Claude Code's default skill-listing budget is ~{bt:,} "
+                 f"(`skillListingBudgetFraction`). Past it, Claude Code **shortens or "
+                 f"drops** skill descriptions — so some skills may not be fully loaded. "
+                 f"Pruning/compressing brings the ones you keep fully back into play.\n")
 
     hist = usage.get("history_days")
     L.append("## Disable candidates — never fired, still auto-invoking\n")
@@ -133,14 +148,29 @@ def build(scan: dict, usage: dict, collide: dict,
         L.append("")
 
     L.append("## Top cost skills\n")
-    L.append("| skill | est tokens/turn | fired (window) | last fired |")
-    L.append("|---|---|---|---|")
+    L.append("| skill | grade | est tokens/turn | fired (window) | last fired |")
+    L.append("|---|---|---|---|---|")
     for s in skills[:15]:
         f = _fires_for(usage, s["name"])
-        L.append(f"| `{s['name']}` | {s['est_tokens']} | "
+        L.append(f"| `{s['name']}` | {s.get('grade', '—')} | {s['est_tokens']} | "
                  f"{f.get('count', 0)} ({f.get('window_count', 0)}) | "
                  f"{f.get('last') or '—'} |")
     L.append("")
+
+    if compress is not None and actions["compress_candidates"]:
+        cc = actions["compress_candidates"]
+        L.append("## Compress — verbose descriptions (keep the skill, slim its cost)\n")
+        L.append(f"{len(cc)} skills you keep have descriptions over "
+                 f"~{compress.get('target_tokens')} tokens. Rewriting them to the minimal "
+                 f"routing-correct form could save **~{actions['compress_savings']:,} "
+                 f"tokens/turn** without disabling anything. Preserve the trigger words "
+                 f"that make each skill auto-fire.\n")
+        L.append("| skill | now | target | save |")
+        L.append("|---|---|---|---|")
+        for c in cc[:20]:
+            L.append(f"| `{c['name']}` | {c['current_tokens']} | {c['target_tokens']} | "
+                     f"{c['potential_savings']} |")
+        L.append("")
 
     if dups:
         L.append("## Likely duplicates\n")
@@ -221,11 +251,16 @@ def main(argv=None) -> int:
     ap.add_argument("--dup-threshold", type=float, default=0.6,
                     help="Jaccard at/above which a pair is a likely duplicate")
     ap.add_argument("--mcp", default=None, help="optional mcpusage.json to include an MCP section")
+    ap.add_argument("--compress", default=None, help="optional compress.json for a compress section")
+    ap.add_argument("--ignore", default=None, help="comma-separated skills to never flag for disable")
     args = ap.parse_args(argv)
 
+    ignore = {n.strip() for n in (args.ignore or "").split(",") if n.strip()}
     md, actions = build(_read(args.scan), _read(args.usage), _read(args.collide),
                         grace_days=args.grace_days, dup_threshold=args.dup_threshold,
-                        mcp=_read(args.mcp) if args.mcp else None)
+                        mcp=_read(args.mcp) if args.mcp else None,
+                        ignore=ignore,
+                        compress=_read(args.compress) if args.compress else None)
     if args.out:
         Path(args.out).write_text(md, encoding="utf-8")
         print(f"wrote {args.out}")

@@ -22,7 +22,8 @@ import sdlib  # noqa: E402
 
 def build(cwd: str | None, ratio: float, listing: dict | None,
           now: float | None = None, exact: bool = False,
-          model: str = "claude-opus-4-8") -> dict:
+          model: str = "claude-opus-4-8",
+          budget_tokens: int = sdlib.DEFAULT_SKILL_BUDGET_TOKENS) -> dict:
     import time
     now = now if now is not None else time.time()
     roots = sdlib.default_roots(cwd)
@@ -62,6 +63,7 @@ def build(cwd: str | None, ratio: float, listing: dict | None,
                 exact_used = True
         else:
             s["est_tokens"] = sdlib.est_tokens(injected_str, ratio)
+        s["grade"] = sdlib.cost_grade(s["est_tokens"])
 
     total_tokens = sum(s["est_tokens"] for s in skills)
 
@@ -74,8 +76,18 @@ def build(cwd: str | None, ratio: float, listing: dict | None,
         "conditional_count": sum(1 for s in skills if s.get("conditional")),
         "stale_count": sum(1 for s in skills if s["stale"]),
         "editable_total_est_tokens": total_tokens,
+        "budget_tokens": budget_tokens,
         "skills": sorted(skills, key=lambda s: s["est_tokens"], reverse=True),
     }
+    # Budget check against the actual injected payload when we have the live
+    # listing; otherwise against the editable estimate.
+    injected_now = result.get("loaded_total_est_tokens")  # set below if listing
+    if listing:
+        injected_now = sdlib.est_tokens(listing.get("content", ""), ratio)
+    basis_tokens = injected_now if injected_now is not None else total_tokens
+    result["over_budget"] = basis_tokens > budget_tokens
+    result["budget_overage_tokens"] = max(0, basis_tokens - budget_tokens)
+    result["budget_basis_tokens"] = basis_tokens
 
     if listing:
         # Authoritative total tax from the literal injected payload.
@@ -99,6 +111,8 @@ def main(argv=None) -> int:
     ap.add_argument("--exact", action="store_true",
                     help="use count_tokens API for exact counts (needs ANTHROPIC_API_KEY)")
     ap.add_argument("--model", default="claude-opus-4-8", help="model for --exact counting")
+    ap.add_argument("--budget-tokens", type=int, default=sdlib.DEFAULT_SKILL_BUDGET_TOKENS,
+                    help="skill-listing budget; over it Claude Code shortens/drops descriptions")
     ap.add_argument("--listing", default=None,
                     help="path to a skill_listing JSON fixture (else --live or none)")
     ap.add_argument("--live", action="store_true",
@@ -114,7 +128,8 @@ def main(argv=None) -> int:
         pd = Path(args.projects_dir) if args.projects_dir else None
         listing = sdlib.latest_skill_listing(pd)
 
-    result = build(args.cwd, args.ratio, listing, exact=args.exact, model=args.model)
+    result = build(args.cwd, args.ratio, listing, exact=args.exact, model=args.model,
+                   budget_tokens=args.budget_tokens)
     if args.exact and not result["exact_tokens"]:
         print("warning: --exact requested but no exact counts produced "
               "(no ANTHROPIC_API_KEY or all API calls failed); using estimates.",

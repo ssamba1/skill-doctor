@@ -20,6 +20,7 @@ import usage as usage_mod  # noqa: E402
 import collide as collide_mod  # noqa: E402
 import report as report_mod  # noqa: E402
 import mcpusage as mcpusage_mod  # noqa: E402
+import compress as compress_mod  # noqa: E402
 
 
 def main(argv=None) -> int:
@@ -68,11 +69,14 @@ def main(argv=None) -> int:
         mcp_args += ["--projects-dir", args.projects_dir]
     mcpusage_mod.main(mcp_args)
 
+    compress_mod.main(["--scan", str(out / "scan.json"), "--out", str(out / "compress.json")])
+
     report_mod.main([
         "--scan", str(out / "scan.json"),
         "--usage", str(out / "usage.json"),
         "--collide", str(out / "collide.json"),
         "--mcp", str(out / "mcpusage.json"),
+        "--compress", str(out / "compress.json"),
         "--out", str(out / "report.md"),
         "--actions-out", str(out / "actions.json"),
         "--grace-days", str(args.grace_days),
@@ -91,6 +95,7 @@ def main(argv=None) -> int:
           f"{acts['projected_token_savings']:,} tok, {acts['projected_pct_savings']}% of editable)"
           f" | {len(acts['duplicate_pairs'])} dup + {len(acts['collision_pairs'])} collision pairs"
           f" | {len(acts.get('unused_mcp_servers', []))} unused MCP servers"
+          f" | {len(acts.get('compress_candidates', []))} compressible (~{acts.get('compress_savings', 0):,} tok)"
           f" | history {hist_str}")
     print(f"Pipeline complete -> {out.resolve()}")
     return 0

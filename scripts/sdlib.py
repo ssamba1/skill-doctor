@@ -22,6 +22,26 @@ LISTING_CAP_CHARS = 1536
 # absolute token figures are estimates, but relative % savings are tokenizer-independent.
 DEFAULT_CHARS_PER_TOKEN = 4.0
 
+# Claude Code's default skill-listing budget is ~1% of the context window
+# (~2,000 tokens on a 200k window). Past it, descriptions are shortened/dropped.
+DEFAULT_SKILL_BUDGET_TOKENS = 2000
+
+# Target size for a single skill's injected description when compressing.
+COMPRESS_TARGET_TOKENS = 75
+
+
+def cost_grade(tokens: int) -> str:
+    """A-F grade for a single skill's per-turn token cost (cheaper = better)."""
+    if tokens <= 50:
+        return "A"
+    if tokens <= 100:
+        return "B"
+    if tokens <= 150:
+        return "C"
+    if tokens <= 250:
+        return "D"
+    return "F"
+
 # Clearly-deprecated model identifiers worth flagging in skill bodies.
 STALE_MODEL_PATTERNS = [
     r"\bclaude-instant(?:-v?\d[\d.]*)?\b",

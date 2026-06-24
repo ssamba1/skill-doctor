@@ -77,9 +77,16 @@ All invoked as `python "$SKILL_DIR/scripts/<tool>.py" --help`:
 - `scan.py` — inventory + per-skill cost + staleness (`--live` / `--listing FILE` / `--exact`)
 - `usage.py` — per-skill firing history from transcripts (`--days N`)
 - `collide.py` — trigger-collision shortlist (`--threshold`, overlap-coefficient)
-- `report.py` — merge into `report.md` + `actions.json`
+- `compress.py` — flag verbose descriptions to slim (keep the skill, cut its cost)
+- `report.py` — merge into `report.md` + `actions.json` (`--ignore a,b` to allowlist skills)
 - `apply.py` — apply/revert `disable-model-invocation` (guarded)
 - `mcpusage.py` — flag configured-but-never-used MCP servers (`~/.claude.json` + transcripts)
+
+The report also flags **budget** (over Claude Code's `skillListingBudgetFraction`, descriptions get
+silently dropped) and lists **compress candidates** — skills to keep but whose descriptions are
+verbose. To act on compression, rewrite the flagged description to its minimal **routing-correct**
+form: keep the trigger words/phrases that make Claude auto-invoke it, cut prose/examples. Verify the
+skill still triggers on its intended prompts before/after.
 
 ## Notes
 - Token figures are offline estimates (~4 chars/token); **percentages are
