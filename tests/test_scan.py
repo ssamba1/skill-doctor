@@ -125,6 +125,14 @@ def test_scan_exact_counts_real_text_not_placeholder(tmp_path, monkeypatch):
     assert all(set(t) != {"X"} for t in captured)
 
 
+def test_scan_empty_library_no_crash(tmp_path, monkeypatch):
+    monkeypatch.setenv("CLAUDE_HOME", str(tmp_path / "empty"))
+    res = scan_mod.build(cwd=str(tmp_path / "noproj"), ratio=4.0, listing=None)
+    assert res["editable_skill_count"] == 0
+    assert res["editable_total_est_tokens"] == 0
+    assert res["skills"] == []
+
+
 def test_scan_main_writes_out(tmp_path, monkeypatch, capsys):
     home = tmp_path / "claude"
     monkeypatch.setenv("CLAUDE_HOME", str(home))

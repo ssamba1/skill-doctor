@@ -88,6 +88,25 @@ def test_report_splits_duplicates_from_collisions():
     assert "Likely duplicates" in md
 
 
+def test_report_mcp_section():
+    mcp = {"configured_count": 3, "never_used": ["git", "time"], "history_days": 40.0}
+    md, actions = report_mod.build(_scan(), _usage(), _collide(), mcp=mcp)
+    assert actions["unused_mcp_servers"] == ["git", "time"]
+    assert "MCP servers" in md
+    assert "`git`" in md and "`time`" in md
+    # no mcp arg -> no section, empty list
+    md2, actions2 = report_mod.build(_scan(), _usage(), _collide())
+    assert actions2["unused_mcp_servers"] == []
+    assert "configured but never used" not in md2
+
+
+def test_report_empty_inputs_no_crash():
+    md, actions = report_mod.build({}, {}, {})
+    assert isinstance(md, str) and "skill-doctor report" in md
+    assert actions["disable_candidates"] == []
+    assert actions["projected_token_savings"] == 0
+
+
 def test_report_handles_no_candidates():
     scan = _scan()
     # mark neverfired as fired

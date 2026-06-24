@@ -30,7 +30,8 @@ def _ever_fired(f: dict) -> bool:
 
 
 def build(scan: dict, usage: dict, collide: dict,
-          grace_days: float = 0.0, dup_threshold: float = 0.6) -> tuple[str, dict]:
+          grace_days: float = 0.0, dup_threshold: float = 0.6,
+          mcp: dict | None = None) -> tuple[str, dict]:
     skills = scan.get("skills", [])
     total = scan.get("editable_total_est_tokens", 0) or 0
     loaded_total = scan.get("loaded_total_est_tokens")
@@ -77,6 +78,7 @@ def build(scan: dict, usage: dict, collide: dict,
             for s in skills if s["stale"]
         ],
         "conditional_skills": [s["name"] for s in skills if s.get("conditional")],
+        "unused_mcp_servers": (mcp or {}).get("never_used", []),
     }
 
     # ---- markdown ----
@@ -176,6 +178,25 @@ def build(scan: dict, usage: dict, collide: dict,
     else:
         L.append("_No deprecated model identifiers found._\n")
 
+    if mcp is not None:
+        L.append("## MCP servers — configured but never used\n")
+        never = mcp.get("never_used", [])
+        hd = mcp.get("history_days")
+        conf = f" (over ~{hd:g}d of history)" if hd else ""
+        if never:
+            L.append(f"{len(never)} of {mcp.get('configured_count', 0)} configured MCP "
+                     f"servers have **no recorded tool calls**{conf}. Each still adds "
+                     f"always-on weight (server instructions). Consider removing unused "
+                     f"ones from `~/.claude.json`:\n")
+            L.append("| server | status |")
+            L.append("|---|---|")
+            for s in never:
+                L.append(f"| `{s}` | never used |")
+            L.append("")
+        else:
+            L.append(f"_All {mcp.get('configured_count', 0)} configured servers have "
+                     f"been used._\n")
+
     L.append("---")
     L.append("_Token figures are offline estimates; percentages are "
              "tokenizer-independent. Run with `--exact` (count_tokens API) for "
@@ -199,10 +220,12 @@ def main(argv=None) -> int:
                          "(default 0 = off; mtime is unreliable on synced machines)")
     ap.add_argument("--dup-threshold", type=float, default=0.6,
                     help="Jaccard at/above which a pair is a likely duplicate")
+    ap.add_argument("--mcp", default=None, help="optional mcpusage.json to include an MCP section")
     args = ap.parse_args(argv)
 
     md, actions = build(_read(args.scan), _read(args.usage), _read(args.collide),
-                        grace_days=args.grace_days, dup_threshold=args.dup_threshold)
+                        grace_days=args.grace_days, dup_threshold=args.dup_threshold,
+                        mcp=_read(args.mcp) if args.mcp else None)
     if args.out:
         Path(args.out).write_text(md, encoding="utf-8")
         print(f"wrote {args.out}")
