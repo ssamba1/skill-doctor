@@ -43,6 +43,33 @@ python scripts/apply.py --from-actions ./skill-doctor-out/actions.json --write  
 - 6 trigger-collision candidates (e.g. `subagent-driven-development` ↔
   `using-git-worktrees`).
 
+## Sample output
+
+```
+## Context tax (per turn)
+- Loaded skills: 89 (authoritative, from live skill_listing)
+- Total injected: ~6,832 tokens every turn (~27,329 chars)
+- Editable always-on tax: ~4,977 tokens/turn
+
+## Disable candidates — never fired, still auto-invoking
+Confidence: based on ~75.7 days of transcript history (36 invocations observed).
+Disabling these 61 skills cuts ~4,581 tokens/turn (92% of editable tax) — still /-invocable.
+| skill        | est tokens/turn | age (days) |
+| claude-api   | 270             | 0.5        |
+| xlsx         | 237             | 0.5        |
+| agent-browser| 236             | 0.5        |
+...
+
+## Trigger-collision candidates
+| a                          | b                    | overlap | shared words            |
+| subagent-driven-development| using-git-worktrees  | 0.67    | executing, implementation, plans |
+
+## MCP servers — configured but never used
+10 of 12 configured MCP servers have no recorded tool calls (over ~75.7d). e.g. chrome-devtools, playwright, motherduck …
+
+SUMMARY: ~6,832 tokens/turn | 61 never-fired (save ~4,581 tok, 92%) | 4 collision pairs | 10 unused MCP servers | history 75.7d
+```
+
 ## Layout
 ```
 scripts/  scan.py usage.py collide.py report.py apply.py run.py mcpusage.py sdlib.py
