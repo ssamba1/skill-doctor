@@ -4,4 +4,7 @@ __pycache__/
 *.bak
 *.tmp
 skill-doctor-out/
+.coverage
+.coverage.*
+htmlcov/
 .DS_Store
