@@ -44,8 +44,9 @@ def _parse_line(line: str):
     try:
         obj = json.loads(line)
     except (json.JSONDecodeError, ValueError):
-        return [], None
+        return [], None, None
     ts = obj.get("timestamp", "")
+    sid = obj.get("sessionId")
     fires = []
     msg = obj.get("message") or {}
     content = msg.get("content")
@@ -60,7 +61,7 @@ def _parse_line(line: str):
                 if skill:
                     fires.append((skill, ts))
     attr = obj.get("attributionSkill")
-    return fires, (attr if isinstance(attr, str) else None)
+    return fires, (attr if isinstance(attr, str) else None), sid
 
 
 def mine(projects_dir: Path, window_days: int, now: datetime | None = None) -> dict:
@@ -78,6 +79,7 @@ def mine(projects_dir: Path, window_days: int, now: datetime | None = None) -> d
 
     hist_min = None   # earliest/latest session timestamp (from content, sync-proof)
     hist_max = None
+    sess_fires: dict[str, set] = {}   # session id -> set of skills that fired (for co-firing)
 
     files = list(projects_dir.rglob("*.jsonl")) if projects_dir.exists() else []
     for f in files:
@@ -100,11 +102,13 @@ def mine(projects_dir: Path, window_days: int, now: datetime | None = None) -> d
                     has_attr = '"attributionSkill"' in line
                     if not has_fire and not has_attr:
                         continue
-                    fires, attr = _parse_line(line)
+                    fires, attr, sid = _parse_line(line)
+                    sid = sid or f.stem
                     if attr:
                         _rec(attr)["attributed"] = True
                     for skill, ts in fires:
                         total_fires += 1
+                        sess_fires.setdefault(sid, set()).add(skill)
                         rec = _rec(skill)
                         rec["count"] += 1
                         dt = _ts_to_dt(ts)
@@ -136,6 +140,7 @@ def mine(projects_dir: Path, window_days: int, now: datetime | None = None) -> d
         "total_fires": total_fires,
         "distinct_skills_fired": sum(1 for r in agg.values() if r["count"] > 0),
         "distinct_skills_seen": len(agg),
+        "session_fires": {s: sorted(v) for s, v in sess_fires.items()},  # co-firing evidence
         "skills": agg,
     }
 

@@ -308,7 +308,17 @@ python scripts/monitor.py --summary
 | `--threshold` / `--min-shared` | collide | collision sensitivity |
 | `--grace-days N` | report, run | exclude never-fired skills modified within N days |
 | `--ignore a,b` | report | allowlist skills (never flag for disable) |
+| `--fail-over-budget` | scan | exit non-zero if over the skill budget (CI gate) |
 | `--write` / `--revert` | apply | apply / undo (dry-run without `--write`) |
+
+**CI gate** — fail a build when skill bloat exceeds your budget:
+
+```yaml
+- run: python scripts/scan.py --live --fail-over-budget --budget-tokens 2000
+```
+
+Trigger collisions are **behaviorally graded**: pairs where both skills actually fire (from your
+transcripts) are flagged `active` and ranked first; pairs where neither fires are `dormant` (theoretical).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

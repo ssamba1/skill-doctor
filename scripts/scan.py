@@ -113,6 +113,8 @@ def main(argv=None) -> int:
     ap.add_argument("--model", default="claude-opus-4-8", help="model for --exact counting")
     ap.add_argument("--budget-tokens", type=int, default=sdlib.DEFAULT_SKILL_BUDGET_TOKENS,
                     help="skill-listing budget; over it Claude Code shortens/drops descriptions")
+    ap.add_argument("--fail-over-budget", action="store_true",
+                    help="exit non-zero if over budget (for CI gates)")
     ap.add_argument("--listing", default=None,
                     help="path to a skill_listing JSON fixture (else --live or none)")
     ap.add_argument("--live", action="store_true",
@@ -140,6 +142,10 @@ def main(argv=None) -> int:
         print(f"wrote {args.out} ({result['editable_skill_count']} skills)")
     else:
         print(out)
+    if args.fail_over_budget and result.get("over_budget"):
+        print(f"FAIL: skills inject ~{result.get('budget_basis_tokens')} tokens/turn, "
+              f"over the {result.get('budget_tokens')} budget.", file=sys.stderr)
+        return 1
     return 0
 
 

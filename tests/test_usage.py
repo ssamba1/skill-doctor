@@ -88,6 +88,20 @@ def test_mine_history_span_from_content(tmp_path):
     assert res["history_end"].startswith("2026-05-31")
 
 
+def test_mine_session_fires_for_cofiring(tmp_path):
+    proj = tmp_path / "projects" / "p1"
+    proj.mkdir(parents=True)
+    lines = [
+        json.dumps({"type": "assistant", "sessionId": "S", "timestamp": "2026-06-20T10:00:00Z",
+                    "message": {"content": [{"type": "tool_use", "name": "Skill", "input": {"skill": "a"}}]}}),
+        json.dumps({"type": "assistant", "sessionId": "S", "timestamp": "2026-06-20T10:01:00Z",
+                    "message": {"content": [{"type": "tool_use", "name": "Skill", "input": {"skill": "b"}}]}}),
+    ]
+    (proj / "s.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    res = usage_mod.mine(tmp_path / "projects", window_days=3650)
+    assert set(res["session_fires"]["S"]) == {"a", "b"}
+
+
 def test_mine_empty_dir(tmp_path):
     res = usage_mod.mine(tmp_path / "nope", window_days=90)
     assert res["total_fires"] == 0

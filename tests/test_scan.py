@@ -147,6 +147,22 @@ def test_scan_grades_and_budget(tmp_path, monkeypatch):
     assert all("grade" in s for s in res["skills"])
 
 
+def test_scan_fail_over_budget_exit_code(tmp_path, monkeypatch):
+    import json
+    home = tmp_path / "claude"
+    monkeypatch.setenv("CLAUDE_HOME", str(home))
+    _mk(home, "alpha", "alpha desc")
+    fx = tmp_path / "listing.json"
+    fx.write_text(json.dumps({"type": "skill_listing", "skillCount": 1, "names": ["alpha"],
+                              "content": "- alpha: " + ("x" * 8000)}), encoding="utf-8")
+    over = scan_mod.main(["--cwd", str(tmp_path / "np"), "--listing", str(fx),
+                          "--budget-tokens", "100", "--fail-over-budget"])
+    assert over == 1                                    # over budget -> non-zero
+    ok = scan_mod.main(["--cwd", str(tmp_path / "np"), "--listing", str(fx),
+                        "--budget-tokens", "100000", "--fail-over-budget"])
+    assert ok == 0
+
+
 def test_scan_main_writes_out(tmp_path, monkeypatch, capsys):
     home = tmp_path / "claude"
     monkeypatch.setenv("CLAUDE_HOME", str(home))

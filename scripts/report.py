@@ -65,10 +65,25 @@ def build(scan: dict, usage: dict, collide: dict,
     savings = sum(c["est_tokens"] for c in candidates)
     pct = round(100.0 * savings / total, 1) if total else 0.0
 
-    # Split overlap pairs into likely-duplicates (high Jaccard) vs collisions.
+    # Split overlap pairs into likely-duplicates (high Jaccard) vs collisions,
+    # and ground each in behavioral evidence: did both skills actually fire, and
+    # how many sessions did they co-fire in? A static overlap where both skills
+    # fire (especially together) is a real competition; one where neither fires
+    # is theoretical.
+    sess_fires = (usage.get("session_fires") or {}).values()
     dups, collisions = [], []
     for p in collide.get("pairs", []):
+        a, b = p.get("a"), p.get("b")
+        p["a_fired"] = _ever_fired(_fires_for(usage, a))
+        p["b_fired"] = _ever_fired(_fires_for(usage, b))
+        p["co_sessions"] = sum(1 for s in sess_fires if a in s and b in s)
+        p["behavioral"] = ("active" if p["a_fired"] and p["b_fired"]
+                           else "dormant" if not p["a_fired"] and not p["b_fired"]
+                           else "mixed")
         (dups if p.get("jaccard", 0) >= dup_threshold else collisions).append(p)
+    # Real (both-fired / co-firing) collisions first.
+    collisions.sort(key=lambda p: (p["a_fired"] and p["b_fired"], p["co_sessions"],
+                                   p.get("score", 0)), reverse=True)
 
     actions = {
         "disable_candidates": candidates,
@@ -190,14 +205,16 @@ def build(scan: dict, usage: dict, collide: dict,
 
     L.append("## Trigger-collision candidates\n")
     if collisions:
-        L.append(f"{len(collisions)} description pairs overlap enough to risk "
-                 f"ambiguous auto-invocation. Review and sharpen the weaker "
-                 f"description (or disable the redundant skill).\n")
-        L.append("| a | b | overlap | shared words |")
-        L.append("|---|---|---|---|")
+        active = sum(1 for p in collisions if p["behavioral"] == "active")
+        L.append(f"{len(collisions)} description pairs overlap enough to risk ambiguous "
+                 f"auto-invocation — **{active} are behaviorally active** (both skills "
+                 f"actually fire). Review active ones first; sharpen the weaker description "
+                 f"or disable the redundant skill.\n")
+        L.append("| a | b | overlap | status | co-fired | shared words |")
+        L.append("|---|---|---|---|---|---|")
         for p in collisions[:25]:
-            L.append(f"| `{p['a']}` | `{p['b']}` | {p.get('score')} | "
-                     f"{', '.join(p.get('shared', [])[:8])} |")
+            L.append(f"| `{p['a']}` | `{p['b']}` | {p.get('score')} | {p['behavioral']} | "
+                     f"{p['co_sessions']} | {', '.join(p.get('shared', [])[:6])} |")
         L.append("")
     else:
         L.append("_No high-overlap pairs._\n")

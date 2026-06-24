@@ -144,6 +144,19 @@ def test_report_missing_description():
     assert "Missing routing descriptions" in md
 
 
+def test_report_collision_behavioral_evidence():
+    coll = {"pairs": [{"a": "used", "b": "neverfired", "score": 0.5, "jaccard": 0.2,
+                       "shared": ["x", "y", "z"]}]}
+    usage = {"skills": {"used": {"count": 3}, "neverfired": {"count": 1}},
+             "session_fires": {"s1": ["used", "neverfired"], "s2": ["used"]}}
+    md, actions = report_mod.build(_scan(), usage, coll)
+    p = actions["collision_pairs"][0]
+    assert p["a_fired"] and p["b_fired"]
+    assert p["behavioral"] == "active"
+    assert p["co_sessions"] == 1
+    assert "behaviorally active" in md
+
+
 def test_report_budget_warning():
     scan = _scan()
     scan.update({"over_budget": True, "budget_tokens": 2000, "budget_basis_tokens": 6832})

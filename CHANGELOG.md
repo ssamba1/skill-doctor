@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.0
+- **Behavioral collision detection** — trigger-collision pairs are now graded by real usage:
+  `active` (both skills fire, with a co-firing count) vs `dormant` (theoretical), ranked active-first.
+  Grounds the static overlap shortlist in transcript evidence.
+- **CI budget gate** — `scan.py --fail-over-budget` exits non-zero when skills exceed the budget,
+  so teams can fail a build on skill bloat.
+
 ## v0.5.2
 - **Fix:** an empty block scalar (`key: |` with no indented body) followed by another
   key could swallow that key during frontmatter parsing — found by property/fuzz testing.
