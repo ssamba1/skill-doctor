@@ -18,8 +18,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install pytest
-        run: python -m pip install --upgrade pytest
-      - name: Run hermetic test suite
-        run: python -m pytest tests/ -q
+      - name: Install test deps
+        run: python -m pip install --upgrade pytest coverage
+      - name: Run hermetic suite with coverage gate
+        run: |
+          python -m coverage run -m pytest tests/ -q
+          python -m coverage report --include="scripts/*" --fail-under=85
         # dogfood tests are opt-in (SKILL_DOCTOR_DOGFOOD=1) and auto-skip in CI.
