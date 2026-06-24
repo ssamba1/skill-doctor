@@ -70,7 +70,19 @@ def main(argv=None) -> int:
         "--actions-out", str(out / "actions.json"),
         "--grace-days", str(args.grace_days),
     ])
-    print(f"\nPipeline complete -> {out.resolve()}")
+
+    # One-line summary to stdout.
+    import json as _json
+    scan = _json.loads((out / "scan.json").read_text(encoding="utf-8"))
+    acts = _json.loads((out / "actions.json").read_text(encoding="utf-8"))
+    usg = _json.loads((out / "usage.json").read_text(encoding="utf-8"))
+    loaded = scan.get("loaded_total_est_tokens")
+    print(f"\nSUMMARY: ~{loaded or scan.get('editable_total_est_tokens'):,} tokens/turn"
+          f" | {len(acts['disable_candidates'])} never-fired (save ~"
+          f"{acts['projected_token_savings']:,} tok, {acts['projected_pct_savings']}%)"
+          f" | {len(acts['duplicate_pairs'])} dup + {len(acts['collision_pairs'])} collision pairs"
+          f" | history {usg.get('history_days')}d")
+    print(f"Pipeline complete -> {out.resolve()}")
     return 0
 
 

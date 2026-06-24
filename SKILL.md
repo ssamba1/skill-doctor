@@ -66,6 +66,8 @@ skills), writes a `.bak`, and is fully reversible.
 - `scripts/collide.py` — trigger-collision shortlist (`--threshold`, overlap-coefficient)
 - `scripts/report.py` — merge into `report.md` + `actions.json`
 - `scripts/apply.py` — apply/revert `disable-model-invocation` (guarded)
+- `scripts/mcpusage.py` — flag configured-but-never-used MCP servers (reads
+  `~/.claude.json` + transcripts)
 
 Run `python scripts/<tool>.py --help` for flags.
 

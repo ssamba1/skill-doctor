@@ -45,10 +45,13 @@ python scripts/apply.py --from-actions ./skill-doctor-out/actions.json --write  
 
 ## Layout
 ```
-scripts/  scan.py usage.py collide.py report.py apply.py run.py sdlib.py
+scripts/  scan.py usage.py collide.py report.py apply.py run.py mcpusage.py sdlib.py
 tests/    pytest suite (hermetic units + a real-machine dogfood)
 references/mechanics.md   the verified Claude Code internals it relies on
 ```
+
+Bonus: `python scripts/mcpusage.py` flags MCP servers you configured but never
+use (another always-on context drain).
 
 ## Tests
 ```bash
