@@ -39,11 +39,18 @@ def build(cwd: str | None, ratio: float, listing: dict | None,
         s["loaded"] = (s["name"] in loaded_names) if listing else None
         s["age_days"] = round((now - s.get("mtime", 0.0)) / 86400.0, 1) if s.get("mtime") else None
         always_on = not s["disabled"] and not s.get("conditional")
-        # Prefer exact injected text from the live listing when available.
-        injected_str = "X" * s["injected_chars"]
-        if always_on and listing_map is not None and s["name"] in listing_map:
+        # Build the real injected text. Prefer the exact line from the live
+        # listing; otherwise reconstruct it from disk fields (NOT a placeholder,
+        # so --exact counts real tokens).
+        if not always_on:
+            injected_str = ""
+        elif listing_map is not None and s["name"] in listing_map:
             injected_str = f"- {s['name']}: {listing_map[s['name']]}"
             s["injected_chars"] = len(injected_str)
+        else:
+            injected_str = sdlib.injected_text(
+                s["name"], s["description"], s.get("when_to_use", "")
+            )
         if not always_on:
             s["est_tokens"] = 0
         elif exact:
@@ -108,6 +115,10 @@ def main(argv=None) -> int:
         listing = sdlib.latest_skill_listing(pd)
 
     result = build(args.cwd, args.ratio, listing, exact=args.exact, model=args.model)
+    if args.exact and not result["exact_tokens"]:
+        print("warning: --exact requested but no exact counts produced "
+              "(no ANTHROPIC_API_KEY or all API calls failed); using estimates.",
+              file=sys.stderr)
     out = json.dumps(result, indent=2)
     if args.out:
         Path(args.out).write_text(out, encoding="utf-8")

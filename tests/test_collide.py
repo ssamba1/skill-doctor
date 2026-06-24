@@ -44,6 +44,20 @@ def test_min_shared_words_suppresses_asymmetric_noise():
     assert len(collide_mod.find_pairs(skills, threshold=0.4, min_shared=1)) == 1
 
 
+def test_excludes_disabled_and_conditional():
+    # identical descriptions, but b is disabled and c is paths-scoped -> neither
+    # auto-triggers, so no collision should be reported.
+    skills = [
+        {"name": "a", "description": "review diff bugs correctness", "when_to_use": "",
+         "disabled": False, "conditional": False},
+        {"name": "b", "description": "review diff bugs correctness", "when_to_use": "",
+         "disabled": True, "conditional": False},
+        {"name": "c", "description": "review diff bugs correctness", "when_to_use": "",
+         "disabled": False, "conditional": True},
+    ]
+    assert collide_mod.find_pairs(skills, 0.4, min_shared=3) == []
+
+
 def test_pairs_sorted_desc():
     skills = [
         {"name": "a", "description": "one two three four", "when_to_use": ""},

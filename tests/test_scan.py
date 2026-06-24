@@ -105,6 +105,26 @@ def test_scan_exact_without_key_falls_back(tmp_path, monkeypatch):
     assert res["skills"][0]["est_tokens"] > 0
 
 
+def test_scan_exact_counts_real_text_not_placeholder(tmp_path, monkeypatch):
+    import sdlib
+    home = tmp_path / "claude"
+    monkeypatch.setenv("CLAUDE_HOME", str(home))
+    _mk(home, "alpha", "a uniquely identifiable description string")
+    captured = []
+
+    def fake_count(text, model="claude-opus-4-8", api_key=None, timeout=20.0):
+        captured.append(text)
+        return 42
+
+    monkeypatch.setattr(sdlib, "count_tokens_exact", fake_count)
+    res = scan_mod.build(cwd=str(tmp_path / "noproj"), ratio=4.0, listing=None, exact=True)
+    assert res["exact_tokens"] is True
+    assert res["skills"][0]["est_tokens"] == 42
+    # the text sent to the API must be the REAL injected text, never an X placeholder
+    assert any("uniquely identifiable description" in t for t in captured)
+    assert all(set(t) != {"X"} for t in captured)
+
+
 def test_scan_main_writes_out(tmp_path, monkeypatch, capsys):
     home = tmp_path / "claude"
     monkeypatch.setenv("CLAUDE_HOME", str(home))

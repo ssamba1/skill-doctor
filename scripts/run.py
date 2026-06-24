@@ -77,11 +77,13 @@ def main(argv=None) -> int:
     acts = _json.loads((out / "actions.json").read_text(encoding="utf-8"))
     usg = _json.loads((out / "usage.json").read_text(encoding="utf-8"))
     loaded = scan.get("loaded_total_est_tokens")
+    hist = usg.get("history_days")
+    hist_str = f"{hist:g}d" if hist is not None else "n/a"
     print(f"\nSUMMARY: ~{loaded or scan.get('editable_total_est_tokens'):,} tokens/turn"
           f" | {len(acts['disable_candidates'])} never-fired (save ~"
-          f"{acts['projected_token_savings']:,} tok, {acts['projected_pct_savings']}%)"
+          f"{acts['projected_token_savings']:,} tok, {acts['projected_pct_savings']}% of editable)"
           f" | {len(acts['duplicate_pairs'])} dup + {len(acts['collision_pairs'])} collision pairs"
-          f" | history {usg.get('history_days')}d")
+          f" | history {hist_str}")
     print(f"Pipeline complete -> {out.resolve()}")
     return 0
 

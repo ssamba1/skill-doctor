@@ -33,6 +33,10 @@ def find_pairs(skills: list[dict], threshold: float, min_shared: int = 3) -> lis
     """
     enriched = []
     for s in skills:
+        # Disabled / paths-scoped skills don't auto-trigger, so they can't cause
+        # trigger collisions — exclude them to avoid false positives.
+        if s.get("disabled") or s.get("conditional"):
+            continue
         text = (s.get("description") or "") + " " + (s.get("when_to_use") or "")
         enriched.append((s.get("name"), s.get("description") or "", sdlib.tokenize_words(text)))
 
@@ -77,11 +81,12 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     skills = _load_skills(args.scan, args.cwd)
+    considered = [s for s in skills if not s.get("disabled") and not s.get("conditional")]
     pairs = find_pairs(skills, args.threshold, args.min_shared)
     result = {
         "generated": "collide",
         "threshold": args.threshold,
-        "skills_considered": len(skills),
+        "skills_considered": len(considered),
         "candidate_pairs": len(pairs),
         "pairs": pairs,
     }

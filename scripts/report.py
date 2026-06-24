@@ -160,7 +160,7 @@ def build(scan: dict, usage: dict, collide: dict,
         L.append("| a | b | overlap | shared words |")
         L.append("|---|---|---|---|")
         for p in collisions[:25]:
-            L.append(f"| `{p['a']}` | `{p['b']}` | {p['score']} | "
+            L.append(f"| `{p['a']}` | `{p['b']}` | {p.get('score')} | "
                      f"{', '.join(p.get('shared', [])[:8])} |")
         L.append("")
     else:
