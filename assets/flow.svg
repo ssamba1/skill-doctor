@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="200" viewBox="0 0 880 200" font-family="'JetBrains Mono','SFMono-Regular',ui-monospace,Consolas,monospace">
+  <rect width="880" height="200" rx="14" fill="#0F172A" stroke="#1E293B"/>
+
+  <!-- stage boxes -->
+  <g>
+    <!-- 1 DISCOVER -->
+    <rect x="28" y="56" width="170" height="88" rx="10" fill="#152136" stroke="#1E293B"/>
+    <text x="113" y="84" text-anchor="middle" font-size="13" font-weight="700" fill="#38bdf8">DISCOVER</text>
+    <text x="113" y="108" text-anchor="middle" font-size="11" fill="#94A3B8">skills + transcripts</text>
+    <text x="113" y="126" text-anchor="middle" font-size="11" fill="#94A3B8">+ live skill_listing</text>
+
+    <!-- 2 ANALYZE -->
+    <rect x="248" y="42" width="190" height="116" rx="10" fill="#152136" stroke="#1E293B"/>
+    <text x="343" y="68" text-anchor="middle" font-size="13" font-weight="700" fill="#38bdf8">ANALYZE</text>
+    <text x="343" y="90" text-anchor="middle" font-size="10.5" fill="#94A3B8">cost · never-fired</text>
+    <text x="343" y="108" text-anchor="middle" font-size="10.5" fill="#94A3B8">collisions · dupes</text>
+    <text x="343" y="126" text-anchor="middle" font-size="10.5" fill="#94A3B8">compress · MCP · stale</text>
+
+    <!-- 3 REPORT -->
+    <rect x="488" y="56" width="170" height="88" rx="10" fill="#152136" stroke="#1E293B"/>
+    <text x="573" y="84" text-anchor="middle" font-size="13" font-weight="700" fill="#38bdf8">REPORT</text>
+    <text x="573" y="108" text-anchor="middle" font-size="11" fill="#94A3B8">report.md</text>
+    <text x="573" y="126" text-anchor="middle" font-size="11" fill="#94A3B8">actions.json</text>
+
+    <!-- 4 TREAT -->
+    <rect x="708" y="56" width="150" height="88" rx="10" fill="#0e2a18" stroke="#22C55E" stroke-opacity="0.45"/>
+    <text x="783" y="84" text-anchor="middle" font-size="13" font-weight="700" fill="#22C55E">TREAT</text>
+    <text x="783" y="108" text-anchor="middle" font-size="11" fill="#94A3B8">disable · compress</text>
+    <text x="783" y="126" text-anchor="middle" font-size="10.5" fill="#22C55E">reversible</text>
+  </g>
+
+  <!-- arrows -->
+  <g stroke="#334155" stroke-width="2" fill="none">
+    <path d="M198 100 H242" marker-end="url(#a)"/>
+    <path d="M438 100 H482" marker-end="url(#a)"/>
+    <path d="M658 100 H702" marker-end="url(#a)"/>
+  </g>
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 z" fill="#22C55E"/>
+    </marker>
+  </defs>
+
+  <text x="440" y="184" text-anchor="middle" font-size="11" fill="#64748b">deterministic facts in scripts · one model judgment (confirm collisions) · nothing leaves your machine</text>
+</svg>
