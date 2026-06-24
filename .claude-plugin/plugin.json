@@ -1,0 +1,8 @@
+{
+  "name": "skill-doctor",
+  "version": "0.2.0",
+  "description": "Audit your installed Claude Code skill library: per-turn token tax, never-fired skills, trigger collisions, staleness, and reversible disable-model-invocation fixes.",
+  "author": "ssamba1",
+  "license": "MIT",
+  "keywords": ["skills", "audit", "context", "token-cost", "claude-code", "hygiene"]
+}

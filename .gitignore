@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.bak
+*.tmp
+skill-doctor-out/
+.DS_Store
