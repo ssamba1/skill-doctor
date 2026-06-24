@@ -91,6 +91,10 @@ and ~48% of skill descriptions are compressible with ~86% functional retention
 | `report.py` | merge into `report.md` + `actions.json` |
 | `apply.py` | apply/revert `disable-model-invocation` (guarded, reversible) |
 | `mcpusage.py` | flag configured-but-unused MCP servers |
+| `context.py` | unified always-on budget (skills + CLAUDE.md + rules), ranked |
+| `monitor.py` | record per-session usage durably (SessionEnd hook); `--summary` |
+| `lint.py` | score a candidate skill before adding it (cost + collision + routing) |
+| `evalgate.py` | generate trigger probes to confirm a change didn't break routing |
 | `run.py` | run the whole pipeline |
 
 > Unlike static skill inspectors, skill-doctor is **usage- and cost-aware**: it reads your real

@@ -86,6 +86,10 @@ def build(scan: dict, usage: dict, collide: dict,
         "compress_candidates": (compress or {}).get("candidates", []),
         "compress_savings": (compress or {}).get("potential_savings", 0),
         "ignored": sorted(ignore),
+        "missing_description": [
+            s["name"] for s in skills
+            if not str(s.get("description", "")).strip() and not s.get("disabled")
+        ],
     }
 
     # ---- markdown ----
@@ -207,6 +211,14 @@ def build(scan: dict, usage: dict, collide: dict,
         L.append("")
     else:
         L.append("_No deprecated model identifiers found._\n")
+
+    if actions["missing_description"]:
+        L.append("## Missing routing descriptions\n")
+        L.append("These skills have no `description` — Claude can't reliably auto-invoke them. "
+                 "Add a one-line description with the trigger words.\n")
+        for n in actions["missing_description"]:
+            L.append(f"- `{n}`")
+        L.append("")
 
     if mcp is not None:
         L.append("## MCP servers — configured but never used\n")

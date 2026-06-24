@@ -122,6 +122,17 @@ def test_report_compress_section():
     assert "Compress" in md and "`verbose`" in md
 
 
+def test_report_missing_description():
+    scan = _scan()
+    scan["skills"].append({"name": "bare", "level": "personal", "est_tokens": 5,
+                           "disabled": False, "user_invocable": True, "loaded": True,
+                           "path": "/x/bare/SKILL.md", "description": "", "when_to_use": "",
+                           "stale": []})
+    md, actions = report_mod.build(scan, _usage(), _collide())
+    assert "bare" in actions["missing_description"]
+    assert "Missing routing descriptions" in md
+
+
 def test_report_budget_warning():
     scan = _scan()
     scan.update({"over_budget": True, "budget_tokens": 2000, "budget_basis_tokens": 6832})

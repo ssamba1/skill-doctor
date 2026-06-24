@@ -81,6 +81,10 @@ All invoked as `python "$SKILL_DIR/scripts/<tool>.py" --help`:
 - `report.py` — merge into `report.md` + `actions.json` (`--ignore a,b` to allowlist skills)
 - `apply.py` — apply/revert `disable-model-invocation` (guarded)
 - `mcpusage.py` — flag configured-but-never-used MCP servers (`~/.claude.json` + transcripts)
+- `context.py` — unified always-on context budget (skills + CLAUDE.md + rules), ranked
+- `monitor.py` — record per-session skill usage durably (`--latest` from a SessionEnd hook; `--summary`)
+- `lint.py` — score a candidate skill before adding it (`--path SKILL.md`: cost, collision risk, routing)
+- `evalgate.py` — generate trigger probes (`--name`/`--path`) to confirm a change didn't break routing
 
 The report also flags **budget** (over Claude Code's `skillListingBudgetFraction`, descriptions get
 silently dropped) and lists **compress candidates** — skills to keep but whose descriptions are

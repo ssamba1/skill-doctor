@@ -1,6 +1,6 @@
 {
   "name": "skill-doctor",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Audit your installed Claude Code skill library: per-turn token tax (A-F grades + budget check), never-fired skills, trigger collisions, duplicates, description compression, unused MCP servers, and reversible disable-model-invocation fixes.",
   "author": "ssamba1",
   "license": "MIT",
