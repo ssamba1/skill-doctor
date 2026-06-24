@@ -122,6 +122,17 @@ def test_report_compress_section():
     assert "Compress" in md and "`verbose`" in md
 
 
+def test_report_heavy_bodies_section():
+    scan = _scan()
+    scan["chars_per_token"] = 4.0
+    scan["skills"].append({"name": "fat", "level": "personal", "est_tokens": 30,
+                           "disabled": False, "user_invocable": True, "loaded": True,
+                           "path": "/x/fat/SKILL.md", "description": "d", "when_to_use": "",
+                           "stale": [], "body_chars": 40000})
+    md, _ = report_mod.build(scan, _usage(), _collide())
+    assert "Heavy bodies" in md and "`fat`" in md
+
+
 def test_report_missing_description():
     scan = _scan()
     scan["skills"].append({"name": "bare", "level": "personal", "est_tokens": 5,

@@ -271,6 +271,7 @@ def _build_record(name: str, path: Path, level: str, fm: dict, mtime: float = 0.
         "mtime": mtime,
         "desc_chars": len(desc) + len(when),
         "injected_chars": len(injected),
+        "body_chars": len(body),          # on-invoke cost (loaded only when the skill fires)
         "stale": stale_findings(body),
     }
 

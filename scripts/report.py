@@ -212,6 +212,19 @@ def build(scan: dict, usage: dict, collide: dict,
     else:
         L.append("_No deprecated model identifiers found._\n")
 
+    heavy = sorted((s for s in skills if s.get("body_chars", 0) > 12000),
+                   key=lambda s: s.get("body_chars", 0), reverse=True)
+    if heavy:
+        cpt = scan.get("chars_per_token") or 4.0
+        L.append("## Heavy bodies (on-invoke cost)\n")
+        L.append("These load in full **when the skill fires** (not every turn). Large bodies "
+                 "are worth trimming/progressive-disclosure if the skill is used often.\n")
+        L.append("| skill | body chars | ~tokens on invoke |")
+        L.append("|---|---|---|")
+        for s in heavy[:12]:
+            L.append(f"| `{s['name']}` | {s['body_chars']:,} | ~{int(s['body_chars']/cpt):,} |")
+        L.append("")
+
     if actions["missing_description"]:
         L.append("## Missing routing descriptions\n")
         L.append("These skills have no `description` — Claude can't reliably auto-invoke them. "
